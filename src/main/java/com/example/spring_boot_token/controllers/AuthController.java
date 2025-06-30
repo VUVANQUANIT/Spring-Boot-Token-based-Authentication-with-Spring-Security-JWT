@@ -4,10 +4,14 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.concurrent.TimeUnit;
+import java.util.Random;
 
+import com.example.spring_boot_token.payload.request.*;
 import jakarta.validation.Valid;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -30,8 +34,12 @@ import com.example.spring_boot_token.respository.RoleRepository;
 import com.example.spring_boot_token.respository.UserRepository;
 import com.example.spring_boot_token.security.jwt.JwtUtils;
 import com.example.spring_boot_token.security.services.UserDetailsImpl;
-
-
+import com.example.spring_boot_token.security.services.EmailService;
+import com.example.spring_boot_token.security.services.OtpService;
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.stereotype.Component;
+import org.springframework.mail.SimpleMailMessage;
+import org.springframework.mail.javamail.JavaMailSender;
 
 @CrossOrigin(origins = "*", maxAge = 3600)
 @RestController
@@ -52,8 +60,25 @@ public class AuthController {
     @Autowired
     JwtUtils jwtUtils;
 
+    @Autowired
+    StringRedisTemplate redisTemplate;
+
+    @Autowired
+    EmailService emailService;
+
+    @Autowired
+    OtpService otpService;
+
+    @Autowired
+    private JavaMailSender mailSender;
+
     @PostMapping("/signin")
     public ResponseEntity<?> authenticateUser(@Valid @RequestBody LoginRequest loginRequest) {
+        User user = userRepository.findByUsername(loginRequest.getUsername())
+            .orElseThrow(() -> new RuntimeException("User not found"));
+        if (!user.isEmailVerified()) {
+            return ResponseEntity.badRequest().body(new MessageResponse("Email not verified!"));
+        }
 
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(loginRequest.getUsername(), loginRequest.getPassword()));
@@ -65,6 +90,8 @@ public class AuthController {
         List<String> roles = userDetails.getAuthorities().stream()
                 .map(item -> item.getAuthority())
                 .collect(Collectors.toList());
+
+        cacheToken(userDetails.getId(), jwt, jwtUtils.getJwtExpirationMs() / (1000 * 60));
 
         return ResponseEntity.ok(new JwtResponse(jwt,
                 userDetails.getId(),
@@ -106,7 +133,7 @@ public class AuthController {
                         Role adminRole = roleRepository.findByName(ERole.ROLE_ADMIN)
                                 .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
                         roles.add(adminRole);
-
+                      
                         break;
                     case "mod":
                         Role modRole = roleRepository.findByName(ERole.ROLE_MODERATOR)
@@ -124,7 +151,41 @@ public class AuthController {
 
         user.setRoles(roles);
         userRepository.save(user);
-
+        otpService.sendOtp(user.getEmail());
         return ResponseEntity.ok(new MessageResponse("User registered successfully!"));
     }
+
+    @PostMapping("/verify-otp")
+    public ResponseEntity<?> verifyOtp(@RequestBody OtpRequest req) {
+        if (otpService.verifyOtp(req.getEmail(), req.getOtp())) {
+            User user = userRepository.findByEmail(req.getEmail())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+            user.setEmailVerified(true);
+            userRepository.save(user);
+            return ResponseEntity.ok(new MessageResponse("Email verified!"));
+        }
+        return ResponseEntity.badRequest().body(new MessageResponse("Invalid or expired OTP!"));
+    }
+
+    @PostMapping("/resend-otp")
+    public ResponseEntity<?> resendOtp(@RequestBody EmailRequest req) {
+        otpService.sendOtp(req.getEmail());
+        return ResponseEntity.ok(new MessageResponse("OTP resent!"));
+    }
+    
+    @PostMapping("/logout")
+    public ResponseEntity<?> logout(@RequestBody LogoutRequest req) {
+        redisTemplate.delete("token:" + req.getUserId());
+        return ResponseEntity.ok(new MessageResponse("Logged out!"));
+    }
+
+    public void cacheToken(Long userId, String token, long ttlMinutes) {
+        redisTemplate.opsForValue().set("token:" + userId, token, ttlMinutes, TimeUnit.MINUTES);
+    }
+
+    public boolean isTokenValid(Long userId, String token) {
+        String cachedToken = redisTemplate.opsForValue().get("token:" + userId);
+        return token.equals(cachedToken);
+    }
 }
+
