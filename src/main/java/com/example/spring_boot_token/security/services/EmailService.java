@@ -20,6 +20,6 @@ public class EmailService {
     }
 
     public void testSendMail() {
-        sendOtpEmail("YOUR_EMAIL@gmail.com", "123456");
+        sendOtpEmail("quancn27@gmail.com", "123456");
     }
 }

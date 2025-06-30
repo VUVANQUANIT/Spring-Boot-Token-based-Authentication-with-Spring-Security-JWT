@@ -179,6 +179,24 @@ public class AuthController {
         return ResponseEntity.ok(new MessageResponse("Logged out!"));
     }
 
+    @PostMapping("/forgot-password")
+    public ResponseEntity<?> forgotPassword(@RequestBody EmailRequest req) {
+        otpService.sendOtp(req.getEmail());
+        return ResponseEntity.ok(new MessageResponse("OTP sent to email!"));
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(@RequestBody ResetPasswordRequest req) {
+        if (otpService.verifyOtp(req.getEmail(), req.getOtp())) {
+            User user = userRepository.findByEmail(req.getEmail())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+            user.setPassword(encoder.encode(req.getNewPassword()));
+            userRepository.save(user);
+            return ResponseEntity.ok(new MessageResponse("Password reset successfully!"));
+        }
+        return ResponseEntity.badRequest().body(new MessageResponse("Invalid or expired OTP!"));
+    }
+
     public void cacheToken(Long userId, String token, long ttlMinutes) {
         redisTemplate.opsForValue().set("token:" + userId, token, ttlMinutes, TimeUnit.MINUTES);
     }
