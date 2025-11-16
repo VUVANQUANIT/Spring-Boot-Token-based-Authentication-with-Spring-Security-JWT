@@ -13,10 +13,15 @@ import java.util.concurrent.TimeUnit;
 
 @Service
 public class OtpService {
-    @Autowired
+
     private StringRedisTemplate redisTemplate;
-    @Autowired
+
     private EmailService emailService;
+
+    public OtpService(StringRedisTemplate redisTemplate, EmailService emailService) {
+        this.redisTemplate = redisTemplate;
+        this.emailService = emailService;
+    }
 
     public void sendOtp(String email) {
         String otp = String.valueOf(new Random().nextInt(900000) + 100000);

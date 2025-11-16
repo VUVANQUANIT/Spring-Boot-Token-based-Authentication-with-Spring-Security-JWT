@@ -45,32 +45,30 @@ import org.springframework.mail.javamail.JavaMailSender;
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
-    @Autowired
     AuthenticationManager  authenticationManager;
 
-    @Autowired
     UserRepository userRepository;
 
-    @Autowired
     RoleRepository roleRepository;
 
-    @Autowired
     PasswordEncoder encoder;
 
-    @Autowired
     JwtUtils jwtUtils;
 
-    @Autowired
     StringRedisTemplate redisTemplate;
 
-    @Autowired
-    EmailService emailService;
-
-    @Autowired
     OtpService otpService;
 
     @Autowired
-    private JavaMailSender mailSender;
+    public AuthController(AuthenticationManager authenticationManager, UserRepository userRepository, RoleRepository roleRepository, PasswordEncoder encoder, JwtUtils jwtUtils, StringRedisTemplate redisTemplate, OtpService otpService) {
+        this.authenticationManager = authenticationManager;
+        this.userRepository = userRepository;
+        this.roleRepository = roleRepository;
+        this.encoder = encoder;
+        this.jwtUtils = jwtUtils;
+        this.redisTemplate = redisTemplate;
+        this.otpService = otpService;
+    }
 
     @PostMapping("/signin")
     public ResponseEntity<?> authenticateUser(@Valid @RequestBody LoginRequest loginRequest) {

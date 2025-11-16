@@ -9,8 +9,12 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class DataInitializer implements CommandLineRunner {
-    @Autowired
+
     private RoleRepository roleRepository;
+    @Autowired
+    public DataInitializer(RoleRepository roleRepository) {
+        this.roleRepository = roleRepository;
+    }
 
     @Override
     public void run(String... args) {

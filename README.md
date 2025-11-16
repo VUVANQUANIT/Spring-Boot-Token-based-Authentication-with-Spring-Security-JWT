@@ -1,32 +1,32 @@
 # Spring Boot Token Project
 
-## Tính năng nổi bật
-- Đăng ký, đăng nhập, phân quyền bằng JWT
-- Xác thực email bằng OTP gửi qua email
-- Lưu OTP và JWT token vào Redis (cache, kiểm soát session)
-- Khởi tạo role mặc định tự động khi start app
+## Key Features
+- User registration, login, and role-based authorization using JWT
+- Email verification with OTP sent via email
+- OTP and JWT token storage in Redis (caching and session management)
+- Automatic default role initialization on application startup
 
-## Hướng dẫn migrate DB
-Nếu bạn thêm trường `emailVerified` vào entity User, cần chạy lệnh sau trên PostgreSQL:
+## Database Migration Guide
+If you add the `emailVerified` field to the User entity, run the following command on PostgreSQL:
 ```sql
 ALTER TABLE users ADD COLUMN email_verified boolean NOT NULL DEFAULT false;
 ```
 
-## Hướng dẫn test API
-1. **Đăng ký:**
-   - POST `/api/auth/signup` với body JSON user
-   - Kiểm tra email nhận OTP
-2. **Xác thực OTP:**
-   - POST `/api/auth/verify-otp` với email + otp
-3. **Đăng nhập:**
-   - POST `/api/auth/signin` với username + password
-4. **Gửi lại OTP:**
-   - POST `/api/auth/resend-otp` với email
+## API Testing Guide
+1. **Sign Up:**
+   - POST `/api/auth/signup` with user JSON body
+   - Check email for OTP code
+2. **Verify OTP:**
+   - POST `/api/auth/verify-otp` with email + otp
+3. **Sign In:**
+   - POST `/api/auth/signin` with username + password
+4. **Resend OTP:**
+   - POST `/api/auth/resend-otp` with email
 5. **Logout:**
-   - POST `/api/auth/logout` với userId
+   - POST `/api/auth/logout` with userId
 
-## Cấu hình gửi mail
-Thêm vào `application.properties`:
+## Email Configuration
+Add the following to `application.properties`:
 ```
 spring.mail.host=smtp.gmail.com
 spring.mail.port=587
@@ -36,7 +36,7 @@ spring.mail.properties.mail.smtp.auth=true
 spring.mail.properties.mail.smtp.starttls.enable=true
 ```
 
-## Lưu ý
-- Đảm bảo đã migrate DB trước khi chạy app.
-- Kiểm tra log nếu không nhận được email OTP.
-- Redis phải chạy trước khi start app. 
+## Important Notes
+- Ensure database migration is completed before running the application.
+- Check application logs if OTP email is not received.
+- Redis must be running before starting the application.
